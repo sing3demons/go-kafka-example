@@ -1,0 +1,68 @@
+version: '3.9'
+services:
+  mongodb1:
+    image: mongo:6
+    container_name: mongodb1
+    command: ['--replSet', 'my-replica-set', '--bind_ip_all', '--port', '27017']
+    volumes:
+      - ./data/mongo-1:/data/db
+    ports:
+      - 27017:27017
+    healthcheck:
+      test: test $$(echo "rs.initiate({_id:'my-replica-set',members:[{_id:0,host:\"mongodb1:27017\"},{_id:1,host:\"mongodb2:27018\"},{_id:2,host:\"mongodb3:27019\"}]}).ok || rs.status().ok" | mongo --port 27017 --quiet) -eq 1
+      interval: 10s
+      start_period: 30s
+    networks:
+      - ms-service
+  mongodb2:
+    image: mongo:6
+    container_name: mongodb2
+    command: ['--replSet', 'my-replica-set', '--bind_ip_all', '--port', '27018']
+    volumes:
+      - ./data/mongo-2:/data/db
+    ports:
+      - 27018:27018
+    networks:
+      - ms-service
+  mongodb3:
+    image: mongo:6
+    container_name: mongodb3
+    command: ['--replSet', 'my-replica-set', '--bind_ip_all', '--port', '27019']
+    volumes:
+      - ./data/mongo-3:/data/db
+    ports:
+      - 27019:27019
+    networks:
+      - ms-service
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.3.0
+    hostname: zookeeper
+    container_name: zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    networks:
+      - ms-service
+  kafka:
+    image: confluentinc/cp-kafka:7.3.0
+    container_name: kafka
+    hostname: kafka
+    ports:
+      - 9092:9092
+      - 29092:29092
+    depends_on:
+      - zookeeper
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: 'zookeeper:2181'
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_INTERNAL:PLAINTEXT
+      # KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_INTERNAL://kafka:29092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092,PLAINTEXT_INTERNAL://broker:29092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+    networks:
+      - ms-service
+networks:
+  ms-service:
+    name: ms-service
