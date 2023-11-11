@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
 	"net/http"
 	"os"
 	"os/signal"
@@ -18,6 +17,7 @@ import (
 	"github.com/sing3demons/service-producer/handler"
 	"github.com/sing3demons/service-producer/models"
 	"github.com/sing3demons/service-producer/services"
+	log "github.com/sirupsen/logrus"
 )
 
 func NewSyncProducer(kafkaBrokers []string) (sarama.SyncProducer, error) {
@@ -35,12 +35,22 @@ type Topic struct {
 }
 
 func main() {
+	logger := log.New()
+	logger.SetFormatter(&log.JSONFormatter{})
+	logger.SetOutput(os.Stdout)
+	logger.SetLevel(log.InfoLevel)
+
 	db, err := ConnectMonoDB()
 	if err != nil {
 		panic(err)
 	}
 	defer DisconnectMongo(db)
-	kafkaBrokers := []string{"localhost:9092"}
+	broker := os.Getenv("KAFKA_BROKERS")
+	if broker == "" {
+		broker = "localhost:9092"
+	}
+
+	kafkaBrokers := []string{broker}
 	kafkaTopic := Topic{
 		Online:  "sales_records.Online",
 		Offline: "sales_records.Offline",
@@ -53,7 +63,7 @@ func main() {
 	defer producer.Close()
 
 	// go metrics.Log(metrics.DefaultRegistry, 5*time.Second, log.New(os.Stderr, "metrics: ", log.LstdFlags))
-	eventProducer := services.NewEventProducer(producer)
+	eventProducer := services.NewEventProducer(producer, logger)
 
 	gin.SetMode(gin.ReleaseMode)
 	r := gin.Default()
@@ -174,7 +184,7 @@ func main() {
 
 	r.GET("/ping", func(c *gin.Context) {
 		c.JSON(200, gin.H{
-			"message": "pong1",
+			"message": "pong",
 		})
 	})
 	RunServer(":2566", "service-producer", r)
@@ -227,7 +237,12 @@ func RunServer(addr, serviceName string, router http.Handler) {
 	}
 
 	go func() {
-		fmt.Printf("[%s] http listen: %s\n", serviceName, srv.Addr)
+		host, err := os.Hostname()
+		if err != nil {
+			host = "unknown"
+		}
+
+		fmt.Printf("[%s] http listen: %s%s\n", serviceName, host, srv.Addr)
 
 		if err := srv.ListenAndServe(); err != nil && errors.Is(err, http.ErrServerClosed) {
 			fmt.Printf("server listen err: %v\n", err)

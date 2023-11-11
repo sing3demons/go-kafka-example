@@ -56,39 +56,11 @@ services:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: 'zookeeper:2181'
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_INTERNAL:PLAINTEXT
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_INTERNAL://kafka:29092
+      # KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_INTERNAL://kafka:29092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092,PLAINTEXT_INTERNAL://broker:29092
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
-    networks:
-      - ms-service
-  service-producer:
-    image: service-producer
-    container_name: service-producer
-    build:
-      context: ./service-producer/
-      dockerfile: Dockerfile
-    ports:
-      - 2566:2566
-    environment:
-      - MONGO_URL=mongodb://mongodb1:27017,mongodb2:27018,mongodb3:27019/?replicaSet=my-replica-set
-      - KAFKA_BROKERS=kafka:9092
-      - HOST=http://localhost:2566
-    depends_on:
-      - kafka
-    networks:
-      - ms-service
-  service-consumer:
-    image: service-consumer
-    container_name: service-consumer
-    build:
-      context: ./service-consumer/
-      dockerfile: Dockerfile
-    environment:
-      - MONGO_URL=mongodb://mongodb1:27017,mongodb2:27018,mongodb3:27019/?replicaSet=my-replica-set
-      - KAFKA_BROKERS=kafka:9092
-    depends_on:
-      - kafka
     networks:
       - ms-service
 networks:

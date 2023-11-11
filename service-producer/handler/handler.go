@@ -9,6 +9,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/sing3demons/service-producer/dto"
 	"github.com/sing3demons/service-producer/models"
+	"github.com/sing3demons/service-producer/utils"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -54,7 +55,7 @@ func (h *handler) GetSaleRecordsOnline(c *gin.Context) {
 		}
 
 		response = append(response, dto.SalesRecord{
-			Href:          "http://localhost:2566/" + strings.ToLower(result.SalesChannel) + "/" + result.ID,
+			Href:          utils.GetHost() + "/" + strings.ToLower(result.SalesChannel) + "/" + result.ID,
 			Region:        result.Region,
 			Country:       result.Country,
 			ItemType:      result.ItemType,
@@ -113,9 +114,10 @@ func (h *handler) GetSaleRecordOnline(c *gin.Context) {
 		})
 		return
 	}
+
 	response := dto.SalesRecord{
 		ID:            result.ID,
-		Href:          "http://localhost:2566/" + strings.ToLower(result.SalesChannel) + "/" + result.ID,
+		Href:          utils.GetHost() + "/" + strings.ToLower(result.SalesChannel) + "/" + result.ID,
 		Region:        result.Region,
 		Country:       result.Country,
 		ItemType:      result.ItemType,
@@ -166,7 +168,7 @@ func (h *handler) GetSaleRecordsOffline(c *gin.Context) {
 		}
 
 		response = append(response, dto.SalesRecord{
-			Href:          "http://localhost:2566/" + strings.ToLower(result.SalesChannel) + "/" + result.ID,
+			Href:          utils.GetHost() + "/" + strings.ToLower(result.SalesChannel) + "/" + result.ID,
 			Region:        result.Region,
 			Country:       result.Country,
 			ItemType:      result.ItemType,
@@ -225,9 +227,10 @@ func (h *handler) GetSaleRecordOffline(c *gin.Context) {
 		})
 		return
 	}
+
 	response := dto.SalesRecord{
 		ID:            result.ID,
-		Href:          "http://localhost:2566/" + strings.ToLower(result.SalesChannel) + "/" + result.ID,
+		Href:          utils.GetHost() + "/" + strings.ToLower(result.SalesChannel) + "/" + result.ID,
 		Region:        result.Region,
 		Country:       result.Country,
 		ItemType:      result.ItemType,

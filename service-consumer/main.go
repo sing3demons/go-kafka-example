@@ -20,7 +20,12 @@ type Topic struct {
 }
 
 func main() {
-	kafkaBrokers := []string{"localhost:9092"}
+	broker := os.Getenv("KAFKA_BROKERS")
+	if broker == "" {
+		broker = "localhost:9092"
+	}
+
+	kafkaBrokers := []string{broker}
 	// kafkaTopic := "create.sales_records"
 	kafkaTopic := Topic{
 		Online:  "sales_records.Online",
@@ -40,6 +45,8 @@ func main() {
 	if err != nil {
 		log.Panicf("Error parsing Kafka version: %v", err)
 	}
+
+	fmt.Println("Kafka brokers: ", kafkaBrokers)
 
 	config := sarama.NewConfig()
 	config.Consumer.Group.Rebalance.Strategy = sarama.NewBalanceStrategyRange()

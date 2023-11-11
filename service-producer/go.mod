@@ -6,6 +6,7 @@ require (
 	github.com/IBM/sarama v1.42.1
 	github.com/gin-gonic/gin v1.9.1
 	github.com/rcrowley/go-metrics v0.0.0-20201227073835-cf1acfcdf475
+	github.com/sirupsen/logrus v1.9.3
 	go.mongodb.org/mongo-driver v1.13.0
 )
 

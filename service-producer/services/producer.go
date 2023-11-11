@@ -5,14 +5,16 @@ import (
 	"fmt"
 
 	"github.com/IBM/sarama"
+	logger "github.com/sirupsen/logrus"
 )
 
 type EventProducer struct {
 	producer sarama.SyncProducer
+	logger   *logger.Logger
 }
 
-func NewEventProducer(producer sarama.SyncProducer) EventProducer {
-	return EventProducer{producer}
+func NewEventProducer(producer sarama.SyncProducer, logger *logger.Logger) EventProducer {
+	return EventProducer{producer, logger}
 }
 
 type Model[T any] struct {

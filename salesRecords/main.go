@@ -17,11 +17,18 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	logger "github.com/sirupsen/logrus"
 )
 
 type Request struct {
 	Type string                `form:"type" binding:"required"`
 	File *multipart.FileHeader `form:"file" binding:"required"`
+}
+
+func init() {
+	logger.SetFormatter(&logger.JSONFormatter{})
+	logger.SetOutput(os.Stdout)
+	logger.SetLevel(logger.InfoLevel)
 }
 
 func main() {
@@ -72,6 +79,11 @@ func main() {
 				return
 			}
 
+			logger.WithFields(logger.Fields{
+				"type": req.Type,
+				"file": file.Filename,
+			}).Info("success")
+
 			c.JSON(http.StatusOK, gin.H{
 				"message": "success",
 				"body": map[string]any{
@@ -102,7 +114,12 @@ func HttpPost(url string, payload []byte) error {
 		return err
 	}
 	defer resp.Body.Close()
-	fmt.Println(resp.Status)
+	logger.WithFields(logger.Fields{
+		"url":    url,
+		"method": httpReq.Method,
+		"header": httpReq.Header,
+		"status": resp.Status,
+	}).Info("success")
 	return nil
 }
 
@@ -175,12 +192,33 @@ func runServer(addr, serviceName string, router http.Handler) {
 		Addr:    addr,
 		Handler: router,
 	}
-
+	host, err := os.Hostname()
+	if err != nil {
+		host = "unknown"
+	}
 	go func() {
-		fmt.Printf("[%s] http listen: %s\n", serviceName, srv.Addr)
+		logger.WithFields(logger.Fields{
+			"serviceName": serviceName,
+			"addr":        srv.Addr,
+			"pid":         os.Getpid(),
+			"ppid":        os.Getppid(),
+			"uid":         os.Getuid(),
+			"gid":         os.Getgid(),
+			"host":        host,
+		}).Info("http listen")
+		fmt.Printf("http listen: %s\n", srv.Addr)
 
 		if err := srv.ListenAndServe(); err != nil && errors.Is(err, http.ErrServerClosed) {
-			fmt.Printf("server listen err: %v\n", err)
+			logger.WithFields(logger.Fields{
+				"serviceName": serviceName,
+				"addr":        srv.Addr,
+				"pid":         os.Getpid(),
+				"ppid":        os.Getppid(),
+				"uid":         os.Getuid(),
+				"gid":         os.Getgid(),
+				"host":        host,
+				"error":       err.Error(),
+			}).Error("http listen")
 		}
 	}()
 
@@ -190,6 +228,16 @@ func runServer(addr, serviceName string, router http.Handler) {
 
 	fmt.Println("shutting down server...")
 
+	logger.WithFields(logger.Fields{
+		"addr":        srv.Addr,
+		"serviceName": serviceName,
+		"pid":         os.Getpid(),
+		"ppid":        os.Getppid(),
+		"uid":         os.Getuid(),
+		"gid":         os.Getgid(),
+		"host":        host,
+	}).Info("shutting down server...")
+
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
@@ -197,5 +245,13 @@ func runServer(addr, serviceName string, router http.Handler) {
 		log.Fatal("server forced to shutdown: ", err)
 	}
 
-	fmt.Println("server exited")
+	logger.WithFields(logger.Fields{
+		"addr":        srv.Addr,
+		"serviceName": serviceName,
+		"pid":         os.Getpid(),
+		"ppid":        os.Getppid(),
+		"uid":         os.Getuid(),
+		"gid":         os.Getgid(),
+		"host":        host,
+	}).Info("server exited")
 }
