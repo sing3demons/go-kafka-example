@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
-	"sync"
 	"syscall"
 	"time"
 
@@ -81,7 +80,6 @@ func main() {
 	defer producer.Close()
 
 	// go metrics.Log(metrics.DefaultRegistry, 5*time.Second, log.New(os.Stderr, "metrics: ", log.LstdFlags))
-	eventProducer := services.NewEventProducer(producer, logger)
 
 	r := gin.New()
 	r.Use(gin.Recovery())
@@ -134,13 +132,12 @@ func main() {
 		}
 
 		if len(offlineChannel) > 0 {
-			event := NewEventProducer(kafkaTopic.Offline, eventProducer)
-			event.EventCreateSalesRecords(offlineChannel)
+			eventProducer := services.NewEventProducer(kafkaTopic.Offline, producer, logger)
+			eventProducer.EventCreateSalesRecords(offlineChannel)
 		}
-
 		if len(onlineChannel) > 0 {
-			event := NewEventProducer(kafkaTopic.Online, eventProducer)
-			event.EventCreateSalesRecords(onlineChannel)
+			eventProducer := services.NewEventProducer(kafkaTopic.Online, producer, logger)
+			eventProducer.EventCreateSalesRecords(onlineChannel)
 		}
 
 		c.JSON(200, gin.H{
@@ -188,12 +185,12 @@ func main() {
 
 		if len(offlineChannel) > 0 {
 			fmt.Println("offlineChannel: ", len(offlineChannel))
-			go services.SendMessage(event, kafkaTopic.Offline, offlineChannel)
+			go event.SendMessage(c, kafkaTopic.Offline, offlineChannel)
 		}
 
 		if len(onlineChannel) > 0 {
 			fmt.Println("onlineChannel: ", len(onlineChannel))
-			go services.SendMessage(event, kafkaTopic.Online, onlineChannel)
+			go event.SendMessage(c, kafkaTopic.Online, onlineChannel)
 		}
 
 		c.JSON(200, gin.H{
@@ -207,46 +204,6 @@ func main() {
 		})
 	})
 	RunServer(":2566", "service-producer", r)
-}
-
-type eventProducer struct {
-	kafkaTopic string
-	producer   services.EventProducer
-}
-
-func NewEventProducer(kafkaTopic string, producer services.EventProducer) *eventProducer {
-	return &eventProducer{
-		kafkaTopic: kafkaTopic,
-		producer:   producer,
-	}
-}
-
-func (ev *eventProducer) EventCreateSalesRecords(sales_records []models.SalesRecord) {
-	ctx, cancel := context.WithCancel(context.Background())
-	var wg sync.WaitGroup
-
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-
-		for _, sales_record := range sales_records {
-			select {
-			case <-ctx.Done():
-				return
-			default:
-				ev.producer.Produce(ev.kafkaTopic, sales_record)
-			}
-		}
-	}()
-
-	sigterm := make(chan os.Signal, 1)
-	signal.Notify(sigterm, syscall.SIGINT, syscall.SIGTERM)
-
-	<-sigterm
-	log.Println("terminating: via signal")
-
-	cancel()
-	wg.Wait()
 }
 
 func RunServer(addr, serviceName string, router http.Handler) {

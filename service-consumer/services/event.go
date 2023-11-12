@@ -5,10 +5,16 @@ import (
 	"encoding/json"
 	"time"
 
+	"github.com/IBM/sarama"
 	"github.com/sirupsen/logrus"
 )
 
-func (obj *consumerHandler) EventHandler(topic string, eventBytes []byte) {
+func (obj *consumerHandler) EventHandler(topic string, msg *sarama.ConsumerMessage) {
+	eventBytes := msg.Value
+	var headers []map[string]any
+	for _, h := range msg.Headers {
+		headers = append(headers, map[string]any{string(h.Key): string(h.Value)})
+	}
 	switch topic {
 	case "sales_records.Online":
 		collection := obj.client.Database("sales_records_Online").Collection("sales_records")
@@ -21,6 +27,11 @@ func (obj *consumerHandler) EventHandler(topic string, eventBytes []byte) {
 		if err != nil {
 			obj.logger.WithFields(logrus.Fields{
 				"topic":        topic,
+				"offset":       msg.Offset,
+				"key":          string(msg.Key),
+				"header":       headers,
+				"ts":           msg.Timestamp,
+				"part":         msg.Partition,
 				"action":       "insert one document",
 				"result":       "failed",
 				"inserted_id":  result.InsertedID,
@@ -33,6 +44,11 @@ func (obj *consumerHandler) EventHandler(topic string, eventBytes []byte) {
 		}
 		obj.logger.WithFields(logrus.Fields{
 			"topic":        topic,
+			"offset":       msg.Offset,
+			"key":          string(msg.Key),
+			"header":       headers,
+			"ts":           msg.Timestamp,
+			"part":         msg.Partition,
 			"action":       "insert one document",
 			"result":       "success",
 			"inserted_id":  result.InsertedID,
@@ -52,6 +68,11 @@ func (obj *consumerHandler) EventHandler(topic string, eventBytes []byte) {
 		if err != nil {
 			obj.logger.WithFields(logrus.Fields{
 				"topic":        topic,
+				"offset":       msg.Offset,
+				"key":          string(msg.Key),
+				"header":       headers,
+				"ts":           msg.Timestamp,
+				"part":         msg.Partition,
 				"action":       "insert one document",
 				"result":       "failed",
 				"inserted_id":  result.InsertedID,
@@ -64,6 +85,11 @@ func (obj *consumerHandler) EventHandler(topic string, eventBytes []byte) {
 		}
 		obj.logger.WithFields(logrus.Fields{
 			"topic":        topic,
+			"offset":       msg.Offset,
+			"key":          string(msg.Key),
+			"header":       headers,
+			"ts":           msg.Timestamp,
+			"part":         msg.Partition,
 			"action":       "insert one document",
 			"result":       "success",
 			"inserted_id":  result.InsertedID,

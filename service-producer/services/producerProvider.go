@@ -7,11 +7,13 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"strconv"
 	"sync"
 	"syscall"
 	"time"
 
 	"github.com/IBM/sarama"
+	"github.com/gin-gonic/gin"
 	"github.com/rcrowley/go-metrics"
 	"github.com/sing3demons/service-producer/models"
 )
@@ -52,10 +54,28 @@ func NewAsyncProducer(kafkaBrokers []string) *producerProvider {
 }
 
 // producerProvider is a thread-safe producer provider.
-func SendMessage(producerProvider *producerProvider, topic string, data []models.SalesRecord) {
-	go metrics.Log(metrics.DefaultRegistry, 5*time.Second, log.New(os.Stderr, "metrics: ", log.LstdFlags))
-
+func (producerProvider *producerProvider) SendMessage(c *gin.Context, topic string, data []models.SalesRecord) {
+	// go metrics.Log(metrics.DefaultRegistry, 5*time.Second, log.New(os.Stderr, "metrics: ", log.LstdFlags))
 	ctx, cancel := context.WithCancel(context.Background())
+	statusCode := strconv.Itoa(c.Writer.Status())
+	header := []sarama.RecordHeader{
+		{Key: []byte("METHOD"), Value: []byte(c.Request.Method)},
+		{Key: []byte("STATUS"), Value: []byte(statusCode)},
+		{Key: []byte("CLIENT_IP"), Value: []byte(c.ClientIP())},
+		{Key: []byte("REQUEST_ID"), Value: []byte(c.Writer.Header().Get("X-Request-Id"))},
+		{Key: []byte("REMOTE_IP"), Value: []byte(c.Request.RemoteAddr)},
+		{Key: []byte("USER_ID"), Value: []byte(c.Request.URL.User.Username())},
+		{Key: []byte("USER_AGENT"), Value: []byte(c.Request.UserAgent())},
+		{Key: []byte("ERROR"), Value: []byte(c.Errors.ByType(gin.ErrorTypePrivate).String())},
+		{Key: []byte("REQUEST"), Value: []byte(c.Request.PostForm.Encode())},
+		{Key: []byte("BODY_SIZE"), Value: []byte(strconv.Itoa(c.Writer.Size()))},
+		{Key: []byte("HOST"), Value: []byte(c.Request.Host)},
+		{Key: []byte("PROTOCOL"), Value: []byte(c.Request.Proto)},
+		{Key: []byte("PATH"), Value: []byte(c.Request.RequestURI)},
+		{Key: []byte("TIME"), Value: []byte(time.Now().Location().String())},
+		{Key: []byte("ResponseSize"), Value: []byte(strconv.Itoa(c.Writer.Size()))},
+	}
+	_ = header
 
 	var wg sync.WaitGroup
 	for i := 0; i < producers; i++ {
@@ -65,12 +85,11 @@ func SendMessage(producerProvider *producerProvider, topic string, data []models
 
 			for _, msg := range data {
 				jsonByte, _ := json.Marshal(msg)
-
 				select {
 				case <-ctx.Done():
 					return
 				default:
-					produceRecord(producerProvider, topic, jsonByte)
+					producerProvider.produceRecord(topic, header, jsonByte)
 				}
 			}
 		}()
@@ -158,7 +177,7 @@ func (p *producerProvider) clear() {
 	p.producers = p.producers[:0]
 }
 
-func produceRecord(producerProvider *producerProvider, topic string, msg []byte) {
+func (producerProvider *producerProvider) produceRecord(topic string, header []sarama.RecordHeader, msg []byte) {
 	producer := producerProvider.borrow()
 	defer producerProvider.release(producer)
 
@@ -172,7 +191,12 @@ func produceRecord(producerProvider *producerProvider, topic string, msg []byte)
 	// Produce some records in transaction
 	var i int64
 	for i = 0; i < recordsNumber; i++ {
-		producer.Input() <- &sarama.ProducerMessage{Topic: topic, Key: nil, Value: sarama.ByteEncoder(msg)}
+		producer.Input() <- &sarama.ProducerMessage{
+			Topic:   topic,
+			Key:     nil,
+			Value:   sarama.ByteEncoder(msg),
+			Headers: header,
+		}
 	}
 
 	// commit transaction

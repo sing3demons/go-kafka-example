@@ -42,11 +42,7 @@ func main() {
 		panic(err)
 	}
 
-	fmt.Println("Starting a new Sarama consumer")
-
 	version, _ := sarama.ParseKafkaVersion("1.0.0")
-
-	fmt.Println("Kafka brokers: ", kafkaBrokers)
 
 	config := sarama.NewConfig()
 	config.Consumer.Group.Rebalance.Strategy = sarama.NewBalanceStrategyRange()
@@ -59,7 +55,7 @@ func main() {
 	defer consumer.Close()
 
 	handler := services.NewConsumerHandler(db, logger)
-	fmt.Println("Consumer up and running!...")
+	fmt.Printf("Starting a new Sarama consumer, Kafka brokers: %v\n", kafkaBrokers)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
