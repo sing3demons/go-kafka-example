@@ -39,7 +39,7 @@ func (obj *consumerHandler) EventHandler(topic string, msg *sarama.ConsumerMessa
 				"collection":   collection.Name(),
 				"SalesChannel": salesRecord.SalesChannel,
 				"error":        err.Error(),
-			}).Error("Inserted a single document")
+			}).Error("failed")
 			return
 		}
 		obj.logger.WithFields(logrus.Fields{
@@ -55,7 +55,7 @@ func (obj *consumerHandler) EventHandler(topic string, msg *sarama.ConsumerMessa
 			"db_name":      collection.Database().Name(),
 			"collection":   collection.Name(),
 			"SalesChannel": salesRecord.SalesChannel,
-		}).Info("Inserted a single document")
+		}).Info("success")
 
 	case "sales_records.Offline":
 		collection := obj.client.Database("sales_records_Offline").Collection("sales_records")
@@ -74,13 +74,12 @@ func (obj *consumerHandler) EventHandler(topic string, msg *sarama.ConsumerMessa
 				"ts":           msg.Timestamp,
 				"part":         msg.Partition,
 				"action":       "insert one document",
-				"result":       "failed",
 				"inserted_id":  result.InsertedID,
 				"db_name":      collection.Database().Name(),
 				"collection":   collection.Name(),
 				"SalesChannel": salesRecord.SalesChannel,
 				"error":        err.Error(),
-			}).Error("Inserted a single document")
+			}).Error("failed")
 			return
 		}
 		obj.logger.WithFields(logrus.Fields{
@@ -91,12 +90,11 @@ func (obj *consumerHandler) EventHandler(topic string, msg *sarama.ConsumerMessa
 			"ts":           msg.Timestamp,
 			"part":         msg.Partition,
 			"action":       "insert one document",
-			"result":       "success",
 			"inserted_id":  result.InsertedID,
 			"db_name":      collection.Database().Name(),
 			"collection":   collection.Name(),
 			"SalesChannel": salesRecord.SalesChannel,
-		}).Info("Inserted a single document")
+		}).Info("success")
 	}
 }
 
