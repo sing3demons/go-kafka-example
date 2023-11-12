@@ -133,11 +133,11 @@ func main() {
 
 		if len(offlineChannel) > 0 {
 			eventProducer := services.NewEventProducer(kafkaTopic.Offline, producer, logger)
-			eventProducer.EventCreateSalesRecords(offlineChannel)
+			eventProducer.EventCreateSalesRecords(c, offlineChannel)
 		}
 		if len(onlineChannel) > 0 {
 			eventProducer := services.NewEventProducer(kafkaTopic.Online, producer, logger)
-			eventProducer.EventCreateSalesRecords(onlineChannel)
+			eventProducer.EventCreateSalesRecords(c, onlineChannel)
 		}
 
 		c.JSON(200, gin.H{

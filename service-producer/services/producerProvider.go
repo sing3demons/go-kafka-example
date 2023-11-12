@@ -75,7 +75,6 @@ func (producerProvider *producerProvider) SendMessage(c *gin.Context, topic stri
 		{Key: []byte("TIME"), Value: []byte(time.Now().Location().String())},
 		{Key: []byte("ResponseSize"), Value: []byte(strconv.Itoa(c.Writer.Size()))},
 	}
-	_ = header
 
 	var wg sync.WaitGroup
 	for i := 0; i < producers; i++ {
