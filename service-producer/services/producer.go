@@ -3,7 +3,6 @@ package services
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"log"
 	"os"
 	"os/signal"
@@ -65,7 +64,12 @@ func (e *eventProducer) Produce(c *gin.Context, topic string, event any) (err er
 		return err
 	}
 
-	fmt.Printf("Message is stored in topic(%s)/partition(%d)/offset(%d)\n", topic, partition, offset)
+	e.logger.WithFields(logger.Fields{
+		"topic":     topic,
+		"partition": partition,
+		"offset":    offset,
+	}).Info("send message to kafka")
+
 	return nil
 }
 
