@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
 	"os"
 	"os/signal"
 	"sync"
@@ -12,6 +11,7 @@ import (
 
 	"github.com/IBM/sarama"
 	"github.com/sing3demons/service-consumer/services"
+	log "github.com/sirupsen/logrus"
 )
 
 type Topic struct {
@@ -20,6 +20,10 @@ type Topic struct {
 }
 
 func main() {
+	logger := log.New()
+	logger.SetFormatter(&log.JSONFormatter{})
+	logger.SetOutput(os.Stdout)
+	logger.SetLevel(log.InfoLevel)
 	broker := os.Getenv("KAFKA_BROKERS")
 	if broker == "" {
 		broker = "localhost:9092"
@@ -39,12 +43,9 @@ func main() {
 		panic(err)
 	}
 
-	log.Println("Starting a new Sarama consumer")
+	fmt.Println("Starting a new Sarama consumer")
 
-	version, err := sarama.ParseKafkaVersion("1.0.0")
-	if err != nil {
-		log.Panicf("Error parsing Kafka version: %v", err)
-	}
+	version, _ := sarama.ParseKafkaVersion("1.0.0")
 
 	fmt.Println("Kafka brokers: ", kafkaBrokers)
 
@@ -58,7 +59,7 @@ func main() {
 	}
 	defer consumer.Close()
 
-	handler := services.NewConsumerHandler(db)
+	handler := services.NewConsumerHandler(db, logger)
 	fmt.Println("Consumer up and running!...")
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -92,10 +93,10 @@ func main() {
 	signal.Notify(sigterm, syscall.SIGINT, syscall.SIGTERM)
 	select {
 	case <-sigterm:
-		log.Println("Received termination signal. Initiating shutdown...")
+		fmt.Println("Received termination signal. Initiating shutdown...")
 		cancel()
 	case <-ctx.Done():
-		log.Println("terminating: context cancelled")
+		fmt.Println("terminating: context cancelled")
 	case <-sigusr1:
 		toggleConsumptionFlow(consumer, &consumptionIsPaused)
 
@@ -108,10 +109,10 @@ func main() {
 func toggleConsumptionFlow(client sarama.ConsumerGroup, isPaused *bool) {
 	if *isPaused {
 		client.ResumeAll()
-		log.Println("Resuming consumption")
+		fmt.Println("Resuming consumption")
 	} else {
 		client.PauseAll()
-		log.Println("Pausing consumption")
+		fmt.Println("Pausing consumption")
 	}
 
 	*isPaused = !*isPaused

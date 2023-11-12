@@ -74,6 +74,7 @@ services:
       - MONGO_URL=mongodb://mongodb1:27017,mongodb2:27018,mongodb3:27019/?replicaSet=my-replica-set
       - KAFKA_BROKERS=kafka:9092
       - HOST=http://localhost:2566
+      - GIN_MODE=release
     depends_on:
       - kafka
     networks:

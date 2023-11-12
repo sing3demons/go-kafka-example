@@ -3,15 +3,14 @@ package services
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"time"
+
+	"github.com/sirupsen/logrus"
 )
 
 func (obj *consumerHandler) EventHandler(topic string, eventBytes []byte) {
 	switch topic {
 	case "sales_records.Online":
-		fmt.Println("sales_records.Online")
-
 		collection := obj.client.Database("sales_records_Online").Collection("sales_records")
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
@@ -20,9 +19,28 @@ func (obj *consumerHandler) EventHandler(topic string, eventBytes []byte) {
 		json.Unmarshal(eventBytes, &salesRecord)
 		result, err := collection.InsertOne(ctx, salesRecord)
 		if err != nil {
-			fmt.Println(err)
+			obj.logger.WithFields(logrus.Fields{
+				"topic":        topic,
+				"action":       "insert one document",
+				"result":       "failed",
+				"inserted_id":  result.InsertedID,
+				"db_name":      collection.Database().Name(),
+				"collection":   collection.Name(),
+				"SalesChannel": salesRecord.SalesChannel,
+				"error":        err.Error(),
+			}).Error("Inserted a single document")
+			return
 		}
-		fmt.Printf("Inserted a single document: %s\n", result.InsertedID)
+		obj.logger.WithFields(logrus.Fields{
+			"topic":        topic,
+			"action":       "insert one document",
+			"result":       "success",
+			"inserted_id":  result.InsertedID,
+			"db_name":      collection.Database().Name(),
+			"collection":   collection.Name(),
+			"SalesChannel": salesRecord.SalesChannel,
+		}).Info("Inserted a single document")
+
 	case "sales_records.Offline":
 		collection := obj.client.Database("sales_records_Offline").Collection("sales_records")
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -32,9 +50,27 @@ func (obj *consumerHandler) EventHandler(topic string, eventBytes []byte) {
 		json.Unmarshal(eventBytes, &salesRecord)
 		result, err := collection.InsertOne(ctx, salesRecord)
 		if err != nil {
-			fmt.Println(err)
+			obj.logger.WithFields(logrus.Fields{
+				"topic":        topic,
+				"action":       "insert one document",
+				"result":       "failed",
+				"inserted_id":  result.InsertedID,
+				"db_name":      collection.Database().Name(),
+				"collection":   collection.Name(),
+				"SalesChannel": salesRecord.SalesChannel,
+				"error":        err.Error(),
+			}).Error("Inserted a single document")
+			return
 		}
-		fmt.Printf("Inserted a single document: %s\n", result.InsertedID)
+		obj.logger.WithFields(logrus.Fields{
+			"topic":        topic,
+			"action":       "insert one document",
+			"result":       "success",
+			"inserted_id":  result.InsertedID,
+			"db_name":      collection.Database().Name(),
+			"collection":   collection.Name(),
+			"SalesChannel": salesRecord.SalesChannel,
+		}).Info("Inserted a single document")
 	}
 }
 

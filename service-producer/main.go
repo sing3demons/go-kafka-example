@@ -15,6 +15,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/sing3demons/service-producer/dto"
 	"github.com/sing3demons/service-producer/handler"
+	"github.com/sing3demons/service-producer/middlewares"
 	"github.com/sing3demons/service-producer/models"
 	"github.com/sing3demons/service-producer/services"
 	log "github.com/sirupsen/logrus"
@@ -34,11 +35,28 @@ type Topic struct {
 	Offline string
 }
 
+var logger *log.Logger
+
+func init() {
+	// setup logrus
+	logLevel, err := log.ParseLevel(os.Getenv("LOG_LEVEL"))
+	if err != nil {
+		logLevel = log.InfoLevel
+	}
+
+	log.SetLevel(logLevel)
+	log.SetFormatter(&log.JSONFormatter{})
+	logger = log.New()
+
+	// setup gin
+	mode := os.Getenv("GIN_MODE")
+	if mode == "" {
+		mode = gin.DebugMode
+	}
+	gin.SetMode(mode)
+}
+
 func main() {
-	logger := log.New()
-	logger.SetFormatter(&log.JSONFormatter{})
-	logger.SetOutput(os.Stdout)
-	logger.SetLevel(log.InfoLevel)
 
 	db, err := ConnectMonoDB()
 	if err != nil {
@@ -65,8 +83,9 @@ func main() {
 	// go metrics.Log(metrics.DefaultRegistry, 5*time.Second, log.New(os.Stderr, "metrics: ", log.LstdFlags))
 	eventProducer := services.NewEventProducer(producer, logger)
 
-	gin.SetMode(gin.ReleaseMode)
-	r := gin.Default()
+	r := gin.New()
+	r.Use(gin.Recovery())
+	r.Use(middlewares.LoggingMiddleware())
 
 	salesHandler := handler.NewHandler(db)
 
@@ -237,13 +256,7 @@ func RunServer(addr, serviceName string, router http.Handler) {
 	}
 
 	go func() {
-		host, err := os.Hostname()
-		if err != nil {
-			host = "unknown"
-		}
-
-		fmt.Printf("[%s] http listen: %s%s\n", serviceName, host, srv.Addr)
-
+		fmt.Printf("[%s] => Listening and serving HTTP on %s\n", serviceName, srv.Addr)
 		if err := srv.ListenAndServe(); err != nil && errors.Is(err, http.ErrServerClosed) {
 			fmt.Printf("server listen err: %v\n", err)
 		}
