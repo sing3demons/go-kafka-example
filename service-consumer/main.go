@@ -19,6 +19,11 @@ type Topic struct {
 	Offline string
 }
 
+var kafkaTopic = Topic{
+	Online:  "sales_records.Online",
+	Offline: "sales_records.Offline",
+}
+
 func main() {
 	logger := log.New()
 	logger.SetFormatter(&log.JSONFormatter{})
@@ -30,12 +35,6 @@ func main() {
 	}
 
 	kafkaBrokers := []string{broker}
-	// kafkaTopic := "create.sales_records"
-	kafkaTopic := Topic{
-		Online:  "sales_records.Online",
-		Offline: "sales_records.Offline",
-	}
-
 	consumerGroupID := "sales_records_consumer_group"
 
 	db, err := ConnectMonoDB()
@@ -99,9 +98,7 @@ func main() {
 		fmt.Println("terminating: context cancelled")
 	case <-sigusr1:
 		toggleConsumptionFlow(consumer, &consumptionIsPaused)
-
 	}
-
 	// Wait for the consumer to finish processing
 	wg.Wait()
 }

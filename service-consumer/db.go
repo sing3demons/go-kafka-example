@@ -16,7 +16,6 @@ func ConnectMonoDB() (*mongo.Client, error) {
 	uri := os.Getenv("MONGO_URL")
 	if uri == "" {
 		uri = "mongodb://mongodb1:27017,mongodb2:27018,mongodb3:27019/?replicaSet=my-replica-set"
-
 	}
 	if uri == "" {
 		return nil, fmt.Errorf("MONGO_URL is empty")
