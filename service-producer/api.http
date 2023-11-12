@@ -1,0 +1,16 @@
+@url=http://localhost:2566
+
+GET {{url}}/online HTTP/1.1
+Host: localhost:2566
+Connection: keep-alive
+Cache-Control: max-age=0
+Upgrade-Insecure-Requests: 1
+Content-Type: application/json
+
+####
+GET {{url}}/offline HTTP/1.1
+Host: localhost:2566
+Connection: keep-alive
+Cache-Control: max-age=0
+Upgrade-Insecure-Requests: 1
+Content-Type: application/json
